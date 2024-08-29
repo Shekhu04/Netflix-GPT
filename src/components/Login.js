@@ -2,19 +2,26 @@ import React, { useState, useRef } from 'react';
 import Header from './Header';
 import { checkValidData } from '../utils/validate';
 import { auth } from '../utils/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { addUser } from '../utils/userSlice';
 
 const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // References for input fields
+  const email = useRef(null);
+  const password = useRef(null);
+  const confirmPassword = useRef(null);
+  const username = useRef(null); // New ref for the username
 
   const toggleForm = () => {
     setIsSignUp(!isSignUp);
   };
-
-  const email = useRef(null);
-  const password = useRef(null);
-  const confirmPassword = useRef(null); // New ref for confirm password
 
   const handleButtonClick = () => {
     // Validate the form data
@@ -27,9 +34,9 @@ const Login = () => {
       // Sign in logic
       signInWithEmailAndPassword(auth, email.current.value, password.current.value)
         .then((userCredential) => {
-          // Signed in 
           const user = userCredential.user;
           console.log(user);
+          navigate("/browse");
         })
         .catch((error) => {
           const errorCode = error.code;
@@ -46,7 +53,24 @@ const Login = () => {
       createUserWithEmailAndPassword(auth, email.current.value, password.current.value)
         .then((userCredential) => {
           const user = userCredential.user;
-          console.log(user);
+
+          // Update the profile with the username
+          updateProfile(user, {
+            displayName: username.current.value, // Use the username ref
+            photoURL: "https://example.com/jane-q-user/profile.jpg"
+          })
+          .then(() => {
+            const {uid,email,displayName} = auth.currentUser;
+            dispatch(
+                addUser({
+                    uid:uid,
+                    email:email,displayName:displayName}));
+            console.log("Profile updated successfully");
+            navigate("/browse");
+          })
+          .catch((error) => {
+            setErrorMessage(error.message);
+          });
         })
         .catch((error) => {
           const errorCode = error.code;
@@ -76,6 +100,7 @@ const Login = () => {
 
         {isSignUp && (
           <input
+            ref={username}
             type="text"
             placeholder="Username"
             className='p-3 my-4 w-full bg-gray-700 transition-opacity duration-300 ease-in-out'
@@ -88,12 +113,6 @@ const Login = () => {
           placeholder="Email Address"
           className='p-3 my-4 w-full bg-gray-700 transition-all duration-300 ease-in-out'
         />
-
-        {/* Smooth height animation for Sign Up fields */}
-        <div
-          className={`overflow-hidden transition-all duration-500 ease-in-out ${isSignUp ? 'max-h-screen' : 'max-h-0'}`}
-        >
-        </div>
 
         <input
           ref={password}
