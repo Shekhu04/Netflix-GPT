@@ -1,6 +1,8 @@
 import React, { useState, useRef } from 'react';
 import Header from './Header';
 import { checkValidData } from '../utils/validate';
+import { auth } from '../utils/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 
 const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -12,11 +14,46 @@ const Login = () => {
 
   const email = useRef(null);
   const password = useRef(null);
+  const confirmPassword = useRef(null); // New ref for confirm password
 
   const handleButtonClick = () => {
     // Validate the form data
     const message = checkValidData(email.current.value, password.current.value);
     setErrorMessage(message);
+
+    if (message) return;
+
+    if (!isSignUp) {
+      // Sign in logic
+      signInWithEmailAndPassword(auth, email.current.value, password.current.value)
+        .then((userCredential) => {
+          // Signed in 
+          const user = userCredential.user;
+          console.log(user);
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setErrorMessage(`${errorCode} - ${errorMessage}`);
+        });
+    } else {
+      // Sign up logic
+      if (password.current.value !== confirmPassword.current.value) {
+        setErrorMessage("Passwords do not match!");
+        return;
+      }
+
+      createUserWithEmailAndPassword(auth, email.current.value, password.current.value)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          console.log(user);
+        })
+        .catch((error) => {
+          const errorCode = error.code;
+          const errorMessage = error.message;
+          setErrorMessage(`${errorCode} - ${errorMessage}`);
+        });
+    }
   };
 
   return (
@@ -56,13 +93,6 @@ const Login = () => {
         <div
           className={`overflow-hidden transition-all duration-500 ease-in-out ${isSignUp ? 'max-h-screen' : 'max-h-0'}`}
         >
-          {isSignUp && (
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              className='p-3 my-4 w-full bg-gray-700 transition-opacity duration-300 ease-in-out'
-            />
-          )}
         </div>
 
         <input
@@ -71,6 +101,15 @@ const Login = () => {
           placeholder="Password"
           className='p-3 my-4 w-full bg-gray-700 transition-all duration-300 ease-in-out'
         />
+
+        {isSignUp && (
+          <input
+            ref={confirmPassword}
+            type="password"
+            placeholder="Confirm Password"
+            className='p-3 my-4 w-full bg-gray-700 transition-opacity duration-300 ease-in-out'
+          />
+        )}
 
         <p className="text-red-500 font-bold text-lg py-2">{errorMessage}</p>
 
