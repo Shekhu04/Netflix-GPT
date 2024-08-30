@@ -2,24 +2,50 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../utils/firebase';
 import { signOut } from "firebase/auth";
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { addUser,removeUser } from '../utils/userSlice';
+import { NETFLIXLOGO, USERICON } from '../utils/constants';
+
 
 function Header() {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+
     const user = useSelector((store) => store.user);
     const handleSignOut = () => {
         signOut(auth).then(() => {
-            navigate("/");
+        
           }).catch((error) => {
             navigate("/error")
           });
     }
+
+    useEffect(()=>{
+       const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+              const {uid,email,displayName} = user;
+              dispatch(addUser({uid:uid,email:email,displayName:displayName}));
+         
+              navigate("/browse");
+            } else {
+              dispatch(removeUser());
+              navigate("/");
+            }
+          });
+
+          //Unsubscribe when component unmounts
+          return () => unsubscribe();
+          
+    },[])
+
   return (
     <div className="absolute w-screen px-20 py-6 z-10 flex items-center bg-gradient-to-b from-black to-transparent justify-between">
       {/* Netflix Logo */}
       <img
         className="w-44"
-        src="https://upload.wikimedia.org/wikipedia/commons/7/7a/Logonetflix.png"
+        src={NETFLIXLOGO}
         alt="Netflix logo"
       />
 
@@ -29,7 +55,7 @@ function Header() {
         <img
           className="w-10 h-10 object-cover"
           alt="User Icon"
-          src="https://wallpapers.com/images/hd/netflix-profile-pictures-1000-x-1000-qo9h82134t9nv0j0.jpg"
+          src={USERICON}
         />
         <button 
         onClick={handleSignOut}
