@@ -1,156 +1,133 @@
-import React, { useState, useRef } from 'react';
-import Header from './Header';
-import { checkValidData } from '../utils/validate';
-import { auth } from '../utils/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
-
-import { useDispatch } from 'react-redux';
-import { addUser } from '../utils/userSlice';
-import { BGIMAGE } from '../utils/constants';
+import { useState, useRef } from "react";
+import Header from "./Header";
+import { checkValidData } from "../utils/validate";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { auth } from "../utils/firebase";
+import { useDispatch } from "react-redux";
+import { addUser } from "../utils/userSlice";
+import { BGIMAGE, USERICON } from "../utils/constants";
 
 const Login = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [isSignInForm, setIsSignInForm] = useState(true);
   const [errorMessage, setErrorMessage] = useState(null);
- 
   const dispatch = useDispatch();
 
-  // References for input fields
+  const name = useRef(null);
   const email = useRef(null);
   const password = useRef(null);
-  const confirmPassword = useRef(null);
-  const username = useRef(null); // New ref for the username
-
-  const toggleForm = () => {
-    setIsSignUp(!isSignUp);
-  };
 
   const handleButtonClick = () => {
-    // Validate the form data
     const message = checkValidData(email.current.value, password.current.value);
     setErrorMessage(message);
-
     if (message) return;
 
-    if (!isSignUp) {
-      // Sign in logic
-      signInWithEmailAndPassword(auth, email.current.value, password.current.value)
+    if (!isSignInForm) {
+      // Sign Up Logic
+      createUserWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
         .then((userCredential) => {
           const user = userCredential.user;
-         
+          updateProfile(user, {
+            displayName: name.current.value,
+            photoURL: USERICON,
+          })
+            .then(() => {
+              const { uid, email, displayName, photoURL } = auth.currentUser;
+              dispatch(
+                addUser({
+                  uid: uid,
+                  email: email,
+                  displayName: displayName,
+                  photoURL: photoURL,
+                })
+              );
+            })
+            .catch((error) => {
+              setErrorMessage(error.message);
+            });
         })
         .catch((error) => {
           const errorCode = error.code;
           const errorMessage = error.message;
-          setErrorMessage(`${errorCode} - ${errorMessage}`);
+          setErrorMessage(errorCode + "-" + errorMessage);
         });
     } else {
-      // Sign up logic
-      if (password.current.value !== confirmPassword.current.value) {
-        setErrorMessage("Passwords do not match!");
-        return;
-      }
-
-      createUserWithEmailAndPassword(auth, email.current.value, password.current.value)
+      // Sign In Logic
+      signInWithEmailAndPassword(
+        auth,
+        email.current.value,
+        password.current.value
+      )
         .then((userCredential) => {
+          // Signed in
           const user = userCredential.user;
-
-          // Update the profile with the username
-          updateProfile(user, {
-            displayName: username.current.value, // Use the username ref
-            photoURL: "https://example.com/jane-q-user/profile.jpg"
-          })
-          .then(() => {
-            const {uid,email,displayName} = auth.currentUser;
-            dispatch(
-                addUser({
-                    uid:uid,
-                    email:email,displayName:displayName}));
-            console.log("Profile updated successfully");
-            
-          })
-          .catch((error) => {
-            setErrorMessage(error.message);
-          });
         })
         .catch((error) => {
           const errorCode = error.code;
           const errorMessage = error.message;
-          setErrorMessage(`${errorCode} - ${errorMessage}`);
+          setErrorMessage(errorCode + "-" + errorMessage);
         });
     }
   };
 
+  const toggleSignInForm = () => {
+    setIsSignInForm(!isSignInForm);
+  };
   return (
     <div>
       <Header />
-      <div className='absolute'>
-        <img
-          src= {BGIMAGE}
-          alt="logo"
-        />
+      <div className="absolute">
+        <img className="w-screen h-screen object-cover" src={BGIMAGE} alt="logo" />
       </div>
-
       <form
         onSubmit={(e) => e.preventDefault()}
-        className='w-3/12 absolute my-36 mx-auto right-0 left-0 p-6 bg-black text-white rounded-md bg-opacity-80 transition-all duration-500 ease-in-out'
+        className="w-full md:w-3/12 absolute p-12 bg-black my-36 mx-auto right-0 left-0 text-white rounded-lg bg-opacity-80"
       >
-        <h1 className='font-bold text-3xl py-3 transition-all duration-300 ease-in-out'>
-          {isSignUp ? 'Sign Up' : 'Sign In'}
+        <h1 className="font-bold text-3xl py-4">
+          {isSignInForm ? "Sign In" : "Sign Up"}
         </h1>
 
-        {isSignUp && (
+        {!isSignInForm && (
           <input
-            ref={username}
+            ref={name}
             type="text"
-            placeholder="Username"
-            className='p-3 my-4 w-full bg-gray-700 transition-opacity duration-300 ease-in-out'
+            placeholder="Full Name"
+            className="p-4 my-4 w-full bg-gray-700"
           />
         )}
-
         <input
           ref={email}
           type="text"
           placeholder="Email Address"
-          className='p-3 my-4 w-full bg-gray-700 transition-all duration-300 ease-in-out'
+          className="p-4 my-4 w-full bg-gray-700"
         />
-
         <input
           ref={password}
           type="password"
           placeholder="Password"
-          className='p-3 my-4 w-full bg-gray-700 transition-all duration-300 ease-in-out'
+          className="p-4 my-4 w-full bg-gray-700"
         />
-
-        {isSignUp && (
-          <input
-            ref={confirmPassword}
-            type="password"
-            placeholder="Confirm Password"
-            className='p-3 my-4 w-full bg-gray-700 transition-opacity duration-300 ease-in-out'
-          />
-        )}
-
         <p className="text-red-500 font-bold text-lg py-2">{errorMessage}</p>
-
         <button
-          className='p-3 my-4 w-full bg-red-700 rounded-lg transition-all duration-300 ease-in-out'
+          className="p-4 my-6 bg-red-700 w-full rounded-lg hover:bg-red-800 hover:shadow-xl transition-all duration-300 ease-in-out"
           onClick={handleButtonClick}
         >
-          {isSignUp ? 'Sign Up' : 'Sign In'}
+          {isSignInForm ? "Sign In" : "Sign Up"}
         </button>
-
-        <p className="py-6">
-          {isSignUp ? 'Already have an account? ' : 'New to Netflix? '}
-          <span
-            className="text-blue-500 cursor-pointer transition-colors duration-300 ease-in-out hover:text-blue-700"
-            onClick={toggleForm}
-          >
-            {isSignUp ? 'Sign In Now' : 'Sign Up Now'}
-          </span>
+        <p className="py-4 cursor-pointer" onClick={toggleSignInForm}>
+          {isSignInForm
+            ? "New to Netflix? Sign Up Now"
+            : "Already registered? Sign In Now."}
         </p>
       </form>
     </div>
   );
 };
-
 export default Login;

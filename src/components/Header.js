@@ -5,94 +5,103 @@ import { signOut } from "firebase/auth";
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { addUser,removeUser } from '../utils/userSlice';
+import { addUser, removeUser } from '../utils/userSlice';
 import { NETFLIXLOGO, SUPPORTED_LANGUAGES, USERICON } from '../utils/constants';
 import { toggleGptSearchView } from '../utils/gptSlice';
 import { changeLanguage } from '../utils/configSlice';
 
-
 function Header() {
-    const navigate = useNavigate();
-    const dispatch = useDispatch();
-    const user = useSelector((store) => store.user);
-    const showGptSearch = useSelector((store) => store.gpt.showGptSearch)
-    const handleSignOut = () => {
-        signOut(auth).then(() => {
-        
-          }).catch((error) => {
-            navigate("/error")
-          });
-    }
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const user = useSelector((store) => store.user);
+  const showGptSearch = useSelector((store) => store.gpt.showGptSearch);
 
-    useEffect(()=>{
-       const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-              const {uid,email,displayName} = user;
-              dispatch(addUser({uid:uid,email:email,displayName:displayName}));
-         
-              navigate("/browse");
-            } else {
-              dispatch(removeUser());
-              navigate("/");
-            }
-          });
+  const handleSignOut = () => {
+    signOut(auth)
+      .then(() => {
+        // Successfully signed out
+      })
+      .catch((error) => {
+        navigate("/error");
+      });
+  };
 
-          //Unsubscribe when component unmounts
-          return () => unsubscribe();
-          
-    },[])
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const { uid, email, displayName } = user;
+        dispatch(addUser({ uid, email, displayName }));
+        navigate("/browse");
+      } else {
+        dispatch(removeUser());
+        navigate("/");
+      }
+    });
 
-    const handleGptSearchClick = () => {
-      //Toggle GPT Search
-      dispatch(toggleGptSearchView());
-    }
+    return () => unsubscribe();
+  }, []);
 
-    const handleLanguageChange = (e) => {
-      //console.log(e.target.value);
-      dispatch(changeLanguage(e.target.value));
-    }
+  const handleGptSearchClick = () => {
+    dispatch(toggleGptSearchView());
+  };
+
+  const handleLanguageChange = (e) => {
+    dispatch(changeLanguage(e.target.value));
+  };
 
   return (
-    <div className="absolute w-screen px-20 py-6 z-10 flex items-center bg-gradient-to-b from-black to-transparent justify-between">
+    <div className="absolute w-full px-4 py-3 md:px-8 md:py-4 lg:px-20 lg:py-6 z-10 flex flex-col md:flex-row items-center justify-between bg-gradient-to-b from-black to-transparent">
       {/* Netflix Logo */}
       <img
-        className="w-44"
+        className="w-28 md:w-36 lg:w-44 cursor-pointer mb-2 md:mb-0"
         src={NETFLIXLOGO}
         alt="Netflix logo"
+        onClick={() => navigate("/")}
       />
-     
-     <div>
-     
-      </div>
 
-      {/* User Icon and Sign Out Button */}
-      {user && (
-      <div className="flex items-center space-x-3">
+      {/* Language Selector and Buttons */}
+      
+      <div className="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4">
+        {/* Language Selector (Show only if GPT search is toggled) */}
+        {showGptSearch && (
+          <select
+            className="p-2 w-full md:w-auto bg-gray-800 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"
+            onChange={handleLanguageChange}
+          >
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <option key={lang.identifier} value={lang.identifier}>
+                {lang.name}
+              </option>
+            ))}
+          </select>
+        )}
 
-         {showGptSearch && (
-          <select 
-          className="p-2 m-2 bg-gray-900 text-white"
-          onChange={handleLanguageChange}>
-          {SUPPORTED_LANGUAGES.map((lang) => (
-          <option key={lang.identifier} value={lang.identifier}>{lang.name}</option>
-        ))}
-      </select>)}
-
-        <button className='py-2 px-4 mx-4 my-2 bg-purple-800 text-white rounded-lg' onClick={handleGptSearchClick}>
+        {/* GPT Search Button */}
+        <button
+          className="py-2 px-4 w-full md:w-auto bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-sm rounded-md shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out"
+          onClick={handleGptSearchClick}
+        >
           {showGptSearch ? "Homepage" : "GPT Search"}
         </button>
-        <img
-          className="w-10 h-10 object-cover"
-          alt="User Icon"
-          src={USERICON}
-        />
-        <button 
-        onClick={handleSignOut}
-        className="text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-sm transition duration-300 ease-in-out">
-          Sign Out
-        </button>
+
+        {/* User Section (Icon and Sign Out Button) */}
+        {user && (
+          <div className="flex items-center space-x-3">
+            <img
+              className="w-8 h-8 md:w-10 md:h-10 object-cover rounded-sm"
+              alt="User Icon"
+              src={USERICON}
+            />
+            <button
+              onClick={handleSignOut}
+              className="text-white w-full md:w-auto bg-gradient-to-r from-red-500 to-pink-600 px-4 py-2 rounded-md shadow-lg transform hover:scale-105 hover:shadow-xl transition-all duration-300 ease-in-out"
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
+      
       </div>
-      )}
     </div>
   );
 }

@@ -22,3 +22,7 @@ const VideoBackground = ({ movieId }) => {
   );
 };
 export default VideoBackground;
+
+
+
+
